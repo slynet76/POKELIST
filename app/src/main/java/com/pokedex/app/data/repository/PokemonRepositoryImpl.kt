@@ -1,10 +1,15 @@
 package com.pokedex.app.data.repository
 
 import com.pokedex.app.data.local.dao.CaptureStatusDao
+import com.pokedex.app.data.local.dao.EvolutionEdgeDao
 import com.pokedex.app.data.local.dao.PokemonDao
 import com.pokedex.app.data.local.entity.CaptureStatusEntity
+import com.pokedex.app.data.local.entity.EvolutionEdgeEntity
 import com.pokedex.app.data.local.entity.PokemonEntity
+import com.pokedex.app.data.remote.EvolutionConditionFormatter
 import com.pokedex.app.data.remote.PokeApiService
+import com.pokedex.app.data.remote.dto.ChainLinkDto
+import com.pokedex.app.domain.model.EvolutionEntry
 import com.pokedex.app.domain.model.Pokemon
 import com.pokedex.app.util.PreferencesManager
 import com.pokedex.app.util.SwitchGamesLoader
@@ -14,6 +19,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
+import java.util.Collections
 import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -22,6 +28,7 @@ import javax.inject.Singleton
 class PokemonRepositoryImpl @Inject constructor(
     private val pokemonDao: PokemonDao,
     private val captureStatusDao: CaptureStatusDao,
+    private val evolutionEdgeDao: EvolutionEdgeDao,
     private val api: PokeApiService,
     private val prefs: PreferencesManager,
     private val gamesLoader: SwitchGamesLoader
@@ -63,15 +70,18 @@ class PokemonRepositoryImpl @Inject constructor(
 
     override suspend fun needsInitialSync(): Boolean = pokemonDao.count() == 0
 
+    override suspend fun needsEvolutionDataSync(): Boolean = pokemonDao.countMissingEvolutionData() > 0
+
     override suspend fun syncAllPokemon(onProgress: (Int, Int) -> Unit) {
         val total = 1025
         val semaphore = Semaphore(10)
         val done = AtomicInteger(0)
+        val processedChains = Collections.synchronizedSet(mutableSetOf<Int>())
         coroutineScope {
             (1..total).map { id ->
                 async {
                     semaphore.withPermit {
-                        runCatching { fetchAndCache(id) }
+                        runCatching { fetchAndCache(id, processedChains) }
                         onProgress(done.incrementAndGet(), total)
                     }
                 }
@@ -81,17 +91,36 @@ class PokemonRepositoryImpl @Inject constructor(
     }
 
     override suspend fun backgroundRefreshIfNeeded() {
-        if (prefs.needsSync()) {
+        if (prefs.needsSync() || needsEvolutionDataSync()) {
             syncAllPokemon(onProgress = { _, _ -> })
         }
     }
 
-    private suspend fun fetchAndCache(id: Int) {
+    override suspend fun getEvolutionEntries(pokemonId: Int): List<EvolutionEntry> {
+        val pokemon = pokemonDao.getById(pokemonId) ?: return emptyList()
+        val chainId = pokemon.evolutionChainId ?: return emptyList()
+        val ids = pokemonDao.getIdsInChain(chainId).sorted()
+        return ids.mapNotNull { id ->
+            val entity = pokemonDao.getById(id) ?: return@mapNotNull null
+            val edges = evolutionEdgeDao.getEdgesForPokemon(id)
+            val incoming = edges.firstOrNull { it.toId == id }
+            EvolutionEntry(
+                pokemonId = entity.id,
+                nameFr = entity.nameFr,
+                spriteUrl = entity.spriteUrl,
+                conditionFromPredecessor = incoming?.conditions
+            )
+        }
+    }
+
+    private suspend fun fetchAndCache(id: Int, processedChains: MutableSet<Int>) {
         val dto = api.getPokemon(id)
         val species = api.getPokemonSpecies(id)
         val nameFr = species.names.find { it.language.name == "fr" }?.name ?: dto.name
         val primaryType = dto.types.find { it.slot == 1 }?.type?.name ?: "normal"
         val secondaryType = dto.types.find { it.slot == 2 }?.type?.name
+        val chainId = species.evolutionChain?.url?.let { extractTrailingId(it) }
+
         pokemonDao.insertAll(listOf(
             PokemonEntity(
                 id = id,
@@ -101,10 +130,35 @@ class PokemonRepositoryImpl @Inject constructor(
                 weightKg = dto.weight / 10f,
                 heightM = dto.height / 10f,
                 spriteUrl = dto.sprites.frontDefault ?: "",
-                spriteShinyUrl = dto.sprites.frontShiny ?: ""
+                spriteShinyUrl = dto.sprites.frontShiny ?: "",
+                evolutionChainId = chainId
             )
         ))
+
+        if (chainId != null && processedChains.add(chainId)) {
+            runCatching {
+                val chain = api.getEvolutionChain(chainId)
+                val edges = mutableListOf<EvolutionEdgeEntity>()
+                walkChain(chain.chain, edges)
+                if (edges.isNotEmpty()) evolutionEdgeDao.insertAll(edges)
+            }
+        }
     }
+
+    private fun walkChain(link: ChainLinkDto, out: MutableList<EvolutionEdgeEntity>) {
+        val fromId = extractTrailingId(link.species.url) ?: return
+        link.evolvesTo.forEach { child ->
+            val toId = extractTrailingId(child.species.url) ?: return@forEach
+            val condition = child.evolutionDetails.firstOrNull()
+                ?.let { EvolutionConditionFormatter.format(it) }
+                ?: "Évolution spéciale"
+            out += EvolutionEdgeEntity(fromId = fromId, toId = toId, conditions = condition)
+            walkChain(child, out)
+        }
+    }
+
+    private fun extractTrailingId(url: String): Int? =
+        url.trimEnd('/').substringAfterLast('/').toIntOrNull()
 
     private fun mapToDomain(entities: List<PokemonEntity>, statuses: List<CaptureStatusEntity>): List<Pokemon> {
         val statusMap = statuses.associateBy { it.pokemonId }

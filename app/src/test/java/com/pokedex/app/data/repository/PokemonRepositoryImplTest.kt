@@ -1,6 +1,7 @@
 package com.pokedex.app.data.repository
 
 import com.pokedex.app.data.local.dao.CaptureStatusDao
+import com.pokedex.app.data.local.dao.EvolutionEdgeDao
 import com.pokedex.app.data.local.dao.PokemonDao
 import com.pokedex.app.data.local.entity.CaptureStatusEntity
 import com.pokedex.app.data.remote.PokeApiService
@@ -16,6 +17,7 @@ class PokemonRepositoryImplTest {
 
     private lateinit var pokemonDao: PokemonDao
     private lateinit var captureStatusDao: CaptureStatusDao
+    private lateinit var evolutionEdgeDao: EvolutionEdgeDao
     private lateinit var api: PokeApiService
     private lateinit var prefs: PreferencesManager
     private lateinit var gamesLoader: SwitchGamesLoader
@@ -25,10 +27,11 @@ class PokemonRepositoryImplTest {
     fun setup() {
         pokemonDao = mockk(relaxed = true)
         captureStatusDao = mockk(relaxed = true)
+        evolutionEdgeDao = mockk(relaxed = true)
         api = mockk()
         prefs = mockk(relaxed = true)
         gamesLoader = mockk(relaxed = true)
-        repo = PokemonRepositoryImpl(pokemonDao, captureStatusDao, api, prefs, gamesLoader)
+        repo = PokemonRepositoryImpl(pokemonDao, captureStatusDao, evolutionEdgeDao, api, prefs, gamesLoader)
     }
 
     @Test
@@ -63,5 +66,11 @@ class PokemonRepositoryImplTest {
     fun `needsInitialSync retourne false si base pleine`() = runTest {
         coEvery { pokemonDao.count() } returns 1025
         assertEquals(false, repo.needsInitialSync())
+    }
+
+    @Test
+    fun `needsEvolutionDataSync delegue au dao`() = runTest {
+        coEvery { pokemonDao.countMissingEvolutionData() } returns 5
+        assertEquals(true, repo.needsEvolutionDataSync())
     }
 }

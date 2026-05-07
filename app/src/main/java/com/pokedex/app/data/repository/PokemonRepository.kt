@@ -1,5 +1,6 @@
 package com.pokedex.app.data.repository
 
+import com.pokedex.app.domain.model.EvolutionEntry
 import com.pokedex.app.domain.model.Pokemon
 import kotlinx.coroutines.flow.Flow
 
@@ -10,6 +11,8 @@ interface PokemonRepository {
     suspend fun toggleCaught(pokemonId: Int)
     suspend fun toggleShinyCaught(pokemonId: Int)
     suspend fun needsInitialSync(): Boolean
+    suspend fun needsEvolutionDataSync(): Boolean
+    suspend fun getEvolutionEntries(pokemonId: Int): List<EvolutionEntry>
     suspend fun syncAllPokemon(onProgress: (Int, Int) -> Unit)
     suspend fun backgroundRefreshIfNeeded()
 }
