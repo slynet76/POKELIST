@@ -10,6 +10,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.pokedex.app.ui.detail.PokemonDetailScreen
 import com.pokedex.app.ui.list.PokedexListScreen
 import com.pokedex.app.ui.list.SyncState
 import com.pokedex.app.ui.list.SyncViewModel
@@ -45,7 +46,7 @@ fun AppNavigation() {
             route = Screen.PokemonDetail.route,
             arguments = listOf(navArgument("pokemonId") { type = NavType.IntType })
         ) {
-            // Filled in Task 16
+            PokemonDetailScreen(onBack = { navController.popBackStack() })
         }
     }
 }
