@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pokedex.app.data.repository.PokemonRepository
+import com.pokedex.app.domain.model.EvolutionEntry
 import com.pokedex.app.domain.model.Pokemon
 import com.pokedex.app.domain.util.TypeChart
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -17,6 +18,7 @@ data class PokemonDetailUiState(
     val weaknesses: List<String> = emptyList(),
     val resistances: List<String> = emptyList(),
     val immunities: List<String> = emptyList(),
+    val evolutionEntries: List<EvolutionEntry> = emptyList(),
     val isLoading: Boolean = true
 )
 
@@ -36,11 +38,13 @@ class PokemonDetailViewModel @Inject constructor(
     private fun loadPokemon() = viewModelScope.launch {
         val pokemon = repository.getPokemonById(pokemonId)
         if (pokemon != null) {
+            val evolutions = repository.getEvolutionEntries(pokemonId)
             _uiState.value = PokemonDetailUiState(
                 pokemon = pokemon,
                 weaknesses = TypeChart.getWeaknesses(pokemon.typePrimary, pokemon.typeSecondary),
                 resistances = TypeChart.getResistances(pokemon.typePrimary, pokemon.typeSecondary),
                 immunities = TypeChart.getImmunities(pokemon.typePrimary, pokemon.typeSecondary),
+                evolutionEntries = evolutions,
                 isLoading = false
             )
         }

@@ -19,6 +19,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.pokedex.app.domain.model.SwitchGame
 import com.pokedex.app.ui.detail.components.CaptureButtons
+import com.pokedex.app.ui.detail.components.EvolutionChainSection
 import com.pokedex.app.ui.detail.components.TypeBadge
 import com.pokedex.app.ui.detail.components.TypeEffectivenessSection
 import com.pokedex.app.ui.theme.PokeRed
@@ -27,6 +28,7 @@ import com.pokedex.app.ui.theme.PokeRed
 @Composable
 fun PokemonDetailScreen(
     onBack: () -> Unit,
+    onEvolutionClick: (Int) -> Unit,
     viewModel: PokemonDetailViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -64,11 +66,35 @@ fun PokemonDetailScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            AsyncImage(
-                model = pokemon.spriteUrl,
-                contentDescription = pokemon.nameFr,
-                modifier = Modifier.size(160.dp)
-            )
+            // Sprites côte-à-côte : normal + shiny
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(24.dp),
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    AsyncImage(
+                        model = pokemon.spriteUrl,
+                        contentDescription = "${pokemon.nameFr} normal",
+                        modifier = Modifier.size(140.dp)
+                    )
+                    Text("Normal", fontSize = 12.sp, color = Color.Gray)
+                }
+                Column(
+                    modifier = Modifier.weight(1f),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    AsyncImage(
+                        model = pokemon.spriteShinyUrl,
+                        contentDescription = "${pokemon.nameFr} shiny",
+                        modifier = Modifier.size(140.dp)
+                    )
+                    Text("✨ Shiny", fontSize = 12.sp, color = Color.Gray)
+                }
+            }
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TypeBadge(pokemon.typePrimary)
@@ -115,6 +141,16 @@ fun PokemonDetailScreen(
                         }
                     }
                 }
+                HorizontalDivider()
+            }
+
+            // Chaîne d'évolution
+            if (state.evolutionEntries.isNotEmpty()) {
+                EvolutionChainSection(
+                    entries = state.evolutionEntries,
+                    currentPokemonId = pokemon.id,
+                    onEvolutionClick = onEvolutionClick
+                )
                 HorizontalDivider()
             }
 

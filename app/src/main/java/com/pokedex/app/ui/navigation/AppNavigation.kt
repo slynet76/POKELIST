@@ -46,7 +46,12 @@ fun AppNavigation() {
             route = Screen.PokemonDetail.route,
             arguments = listOf(navArgument("pokemonId") { type = NavType.IntType })
         ) {
-            PokemonDetailScreen(onBack = { navController.popBackStack() })
+            PokemonDetailScreen(
+                onBack = { navController.popBackStack() },
+                onEvolutionClick = { id ->
+                    navController.navigate(Screen.PokemonDetail.createRoute(id))
+                }
+            )
         }
     }
 }

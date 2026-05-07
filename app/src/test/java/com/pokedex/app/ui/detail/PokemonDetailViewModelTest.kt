@@ -2,6 +2,7 @@ package com.pokedex.app.ui.detail
 
 import androidx.lifecycle.SavedStateHandle
 import com.pokedex.app.data.repository.PokemonRepository
+import com.pokedex.app.domain.model.EvolutionEntry
 import com.pokedex.app.domain.model.Pokemon
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -68,5 +69,19 @@ class PokemonDetailViewModelTest {
     fun `toggleShinyCaught appelle le repository`() = runTest {
         vm.toggleShinyCaught()
         coVerify { repo.toggleShinyCaught(6) }
+    }
+
+    @Test
+    fun `chargement charge aussi les entrees d evolution`() = runTest {
+        val entries = listOf(
+            EvolutionEntry(4, "Salamèche", "url1", null),
+            EvolutionEntry(5, "Reptincel", "url2", "Niveau 16"),
+            EvolutionEntry(6, "Dracaufeu", "url3", "Niveau 36")
+        )
+        coEvery { repo.getEvolutionEntries(6) } returns entries
+        // Re-instantiate VM so the stub takes effect during init
+        val savedState = SavedStateHandle(mapOf("pokemonId" to 6))
+        val vm2 = PokemonDetailViewModel(repo, savedState)
+        assertEquals(3, vm2.uiState.value.evolutionEntries.size)
     }
 }
