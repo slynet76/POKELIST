@@ -11,6 +11,7 @@ import com.pokedex.app.data.remote.PokeApiService
 import com.pokedex.app.data.remote.dto.ChainLinkDto
 import com.pokedex.app.domain.model.EvolutionEntry
 import com.pokedex.app.domain.model.Pokemon
+import com.pokedex.app.domain.util.RegionalFormLabels
 import com.pokedex.app.util.PreferencesManager
 import com.pokedex.app.util.SwitchGamesLoader
 import kotlinx.coroutines.async
@@ -108,7 +109,8 @@ class PokemonRepositoryImpl @Inject constructor(
                 pokemonId = entity.id,
                 nameFr = entity.nameFr,
                 spriteUrl = entity.spriteUrl,
-                conditionFromPredecessor = incoming?.conditions
+                conditionFromPredecessor = incoming?.conditions,
+                formLabel = RegionalFormLabels.forId(entity.id)
             )
         }
     }
