@@ -20,4 +20,10 @@ interface PokemonDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(pokemon: List<PokemonEntity>)
+
+    @Query("SELECT COUNT(*) FROM pokemon WHERE evolutionChainId IS NULL")
+    suspend fun countMissingEvolutionData(): Int
+
+    @Query("SELECT id FROM pokemon WHERE evolutionChainId = :chainId")
+    suspend fun getIdsInChain(chainId: Int): List<Int>
 }
