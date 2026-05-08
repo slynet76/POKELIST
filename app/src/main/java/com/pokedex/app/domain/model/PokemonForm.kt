@@ -21,5 +21,7 @@ data class PokemonForm(
     val speed: Int = 0,
     val cryUrl: String? = null,
     val animatedSpriteUrl: String? = null,
-    val animatedShinySpriteUrl: String? = null
+    val animatedShinySpriteUrl: String? = null,
+    val officialArtworkUrl: String? = null,
+    val officialArtworkShinyUrl: String? = null
 )

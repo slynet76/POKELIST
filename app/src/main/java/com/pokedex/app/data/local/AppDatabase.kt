@@ -25,7 +25,7 @@ import com.pokedex.app.data.local.entity.PokemonEntity
         EvolutionEdgeEntity::class,
         PokemonVariantEntity::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -88,6 +88,15 @@ abstract class AppDatabase : RoomDatabase() {
                 db.execSQL("ALTER TABLE pokemon_variant ADD COLUMN cryUrl TEXT")
                 db.execSQL("ALTER TABLE pokemon_variant ADD COLUMN animatedSpriteUrl TEXT")
                 db.execSQL("ALTER TABLE pokemon_variant ADD COLUMN animatedShinySpriteUrl TEXT")
+            }
+        }
+
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Adds official-artwork columns. Does NOT touch capture_status — captures are preserved.
+                db.execSQL("ALTER TABLE pokemon ADD COLUMN officialArtworkUrl TEXT")
+                db.execSQL("ALTER TABLE pokemon_variant ADD COLUMN officialArtworkUrl TEXT")
+                db.execSQL("ALTER TABLE pokemon_variant ADD COLUMN officialArtworkShinyUrl TEXT")
             }
         }
     }

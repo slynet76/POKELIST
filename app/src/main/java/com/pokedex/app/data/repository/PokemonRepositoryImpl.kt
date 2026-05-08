@@ -82,6 +82,8 @@ class PokemonRepositoryImpl @Inject constructor(
 
     override suspend fun needsV14DataSync(): Boolean = pokemonVariantDao.countMissingV14Data() > 0
 
+    override suspend fun needsArtworkSync(): Boolean = pokemonDao.countMissingArtwork() > 0
+
     override suspend fun getForms(speciesId: Int): List<PokemonForm> =
         pokemonVariantDao.getVariantsForSpecies(speciesId).map { it.toDomain() }
 
@@ -104,7 +106,7 @@ class PokemonRepositoryImpl @Inject constructor(
     }
 
     override suspend fun backgroundRefreshIfNeeded() {
-        if (prefs.needsSync() || needsEvolutionDataSync() || needsVariantsSync() || needsV14DataSync()) {
+        if (prefs.needsSync() || needsEvolutionDataSync() || needsVariantsSync() || needsV14DataSync() || needsArtworkSync()) {
             syncAllPokemon(onProgress = { _, _ -> })
         }
     }
@@ -145,7 +147,8 @@ class PokemonRepositoryImpl @Inject constructor(
                 heightM = defaultDto.height / 10f,
                 spriteUrl = defaultDto.sprites.frontDefault ?: "",
                 spriteShinyUrl = defaultDto.sprites.frontShiny ?: "",
-                evolutionChainId = chainId
+                evolutionChainId = chainId,
+                officialArtworkUrl = defaultDto.sprites.other?.officialArtwork?.frontDefault
             )
         ))
 
@@ -183,7 +186,9 @@ class PokemonRepositoryImpl @Inject constructor(
                 speed = statByName(variantDto.stats, "speed"),
                 cryUrl = variantDto.cries?.latest,
                 animatedSpriteUrl = variantDto.sprites.other?.showdown?.frontDefault,
-                animatedShinySpriteUrl = variantDto.sprites.other?.showdown?.frontShiny
+                animatedShinySpriteUrl = variantDto.sprites.other?.showdown?.frontShiny,
+                officialArtworkUrl = variantDto.sprites.other?.officialArtwork?.frontDefault,
+                officialArtworkShinyUrl = variantDto.sprites.other?.officialArtwork?.frontShiny
             )
         }
         if (variants.isNotEmpty()) pokemonVariantDao.insertAll(variants)
@@ -225,7 +230,8 @@ class PokemonRepositoryImpl @Inject constructor(
         id = id, nameFr = nameFr, typePrimary = typePrimary, typeSecondary = typeSecondary,
         weightKg = weightKg, heightM = heightM, spriteUrl = spriteUrl, spriteShinyUrl = spriteShinyUrl,
         isCaught = status?.isCaught ?: false, isShinyCaught = status?.isShinyCaught ?: false,
-        availableInGames = games
+        availableInGames = games,
+        officialArtworkUrl = officialArtworkUrl
     )
 
     private fun PokemonVariantEntity.toDomain() = PokemonForm(
@@ -249,6 +255,8 @@ class PokemonRepositoryImpl @Inject constructor(
         speed = speed,
         cryUrl = cryUrl,
         animatedSpriteUrl = animatedSpriteUrl,
-        animatedShinySpriteUrl = animatedShinySpriteUrl
+        animatedShinySpriteUrl = animatedShinySpriteUrl,
+        officialArtworkUrl = officialArtworkUrl,
+        officialArtworkShinyUrl = officialArtworkShinyUrl
     )
 }

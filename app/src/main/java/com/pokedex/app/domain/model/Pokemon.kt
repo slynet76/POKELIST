@@ -11,5 +11,6 @@ data class Pokemon(
     val spriteShinyUrl: String,
     val isCaught: Boolean = false,
     val isShinyCaught: Boolean = false,
-    val availableInGames: List<String> = emptyList()
+    val availableInGames: List<String> = emptyList(),
+    val officialArtworkUrl: String? = null
 )

@@ -25,7 +25,11 @@ class SyncViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            val needsFullSync = repository.needsInitialSync() || repository.needsEvolutionDataSync() || repository.needsVariantsSync() || repository.needsV14DataSync()
+            val needsFullSync = repository.needsInitialSync() ||
+                repository.needsEvolutionDataSync() ||
+                repository.needsVariantsSync() ||
+                repository.needsV14DataSync() ||
+                repository.needsArtworkSync()
             if (needsFullSync) {
                 _state.value = SyncState.Syncing(0, 1025)
                 repository.syncAllPokemon { done, total ->

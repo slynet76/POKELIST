@@ -13,5 +13,6 @@ data class PokemonEntity(
     val heightM: Float,
     val spriteUrl: String,
     val spriteShinyUrl: String,
-    val evolutionChainId: Int? = null
+    val evolutionChainId: Int? = null,
+    val officialArtworkUrl: String? = null
 )

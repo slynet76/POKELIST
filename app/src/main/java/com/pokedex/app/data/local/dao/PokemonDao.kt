@@ -26,4 +26,7 @@ interface PokemonDao {
 
     @Query("SELECT id FROM pokemon WHERE evolutionChainId = :chainId")
     suspend fun getIdsInChain(chainId: Int): List<Int>
+
+    @Query("SELECT COUNT(*) FROM pokemon WHERE officialArtworkUrl IS NULL")
+    suspend fun countMissingArtwork(): Int
 }

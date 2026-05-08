@@ -37,10 +37,16 @@ data class CriesDto(
 )
 
 data class SpritesOtherDto(
-    val showdown: ShowdownSpritesDto? = null
+    val showdown: ShowdownSpritesDto? = null,
+    @SerializedName("official-artwork") val officialArtwork: OfficialArtworkSpritesDto? = null
 )
 
 data class ShowdownSpritesDto(
+    @SerializedName("front_default") val frontDefault: String? = null,
+    @SerializedName("front_shiny") val frontShiny: String? = null
+)
+
+data class OfficialArtworkSpritesDto(
     @SerializedName("front_default") val frontDefault: String? = null,
     @SerializedName("front_shiny") val frontShiny: String? = null
 )
