@@ -11,7 +11,6 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
 import com.pokedex.app.domain.model.PokemonForm
 import com.pokedex.app.domain.util.TypeChart
 import com.pokedex.app.ui.theme.PokeRed
@@ -49,7 +48,7 @@ fun FormPage(form: PokemonForm, modifier: Modifier = Modifier) {
                 modifier = Modifier.weight(1f),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                AsyncImage(
+                FloatingArtwork(
                     model = form.officialArtworkUrl ?: form.animatedSpriteUrl ?: form.spriteUrl,
                     contentDescription = "${form.nameFr} normal",
                     modifier = Modifier.size(140.dp)
@@ -60,10 +59,11 @@ fun FormPage(form: PokemonForm, modifier: Modifier = Modifier) {
                 modifier = Modifier.weight(1f),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                AsyncImage(
+                FloatingArtwork(
                     model = form.officialArtworkShinyUrl ?: form.animatedShinySpriteUrl ?: form.spriteShinyUrl,
                     contentDescription = "${form.nameFr} shiny",
-                    modifier = Modifier.size(140.dp)
+                    modifier = Modifier.size(140.dp),
+                    phaseOffsetMs = 350
                 )
                 Text("✨ Shiny", fontSize = 12.sp, color = Color.Gray)
             }
