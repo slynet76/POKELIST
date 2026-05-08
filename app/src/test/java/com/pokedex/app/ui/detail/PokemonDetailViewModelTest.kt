@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import com.pokedex.app.data.repository.PokemonRepository
 import com.pokedex.app.domain.model.EvolutionEntry
 import com.pokedex.app.domain.model.Pokemon
+import com.pokedex.app.domain.model.PokemonForm
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -16,7 +17,6 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -53,13 +53,6 @@ class PokemonDetailViewModelTest {
     }
 
     @Test
-    fun `faiblesses calculees pour feu-vol incluent eau et roche`() = runTest {
-        val weaknesses = vm.uiState.value.weaknesses
-        assertTrue("water" in weaknesses)
-        assertTrue("rock" in weaknesses)
-    }
-
-    @Test
     fun `toggleCaught appelle le repository`() = runTest {
         vm.toggleCaught()
         coVerify { repo.toggleCaught(6) }
@@ -83,5 +76,17 @@ class PokemonDetailViewModelTest {
         val savedState = SavedStateHandle(mapOf("pokemonId" to 6))
         val vm2 = PokemonDetailViewModel(repo, savedState)
         assertEquals(3, vm2.uiState.value.evolutionEntries.size)
+    }
+
+    @Test
+    fun `chargement charge aussi les formes`() = runTest {
+        val forms = listOf(
+            PokemonForm(6, 6, "default", null, "Dracaufeu", "fire", "flying", 90f, 1.7f, "u1", "u2", true)
+        )
+        coEvery { repo.getForms(6) } returns forms
+        val savedState = SavedStateHandle(mapOf("pokemonId" to 6))
+        val vm2 = PokemonDetailViewModel(repo, savedState)
+        assertEquals(1, vm2.uiState.value.forms.size)
+        assertEquals("Dracaufeu", vm2.uiState.value.forms.first().nameFr)
     }
 }

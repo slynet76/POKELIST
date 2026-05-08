@@ -1,6 +1,8 @@
 package com.pokedex.app.ui.detail
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -16,12 +18,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import coil.compose.AsyncImage
 import com.pokedex.app.domain.model.SwitchGame
 import com.pokedex.app.ui.detail.components.CaptureButtons
 import com.pokedex.app.ui.detail.components.EvolutionChainSection
-import com.pokedex.app.ui.detail.components.TypeBadge
-import com.pokedex.app.ui.detail.components.TypeEffectivenessSection
+import com.pokedex.app.ui.detail.components.FormPage
+import com.pokedex.app.ui.detail.components.FormPagerIndicator
 import com.pokedex.app.ui.theme.PokeRed
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -33,6 +34,7 @@ fun PokemonDetailScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     val pokemon = state.pokemon
+    val forms = state.forms
 
     Scaffold(
         topBar = {
@@ -57,77 +59,39 @@ fun PokemonDetailScreen(
             return@Scaffold
         }
 
+        val pagerState = rememberPagerState(pageCount = { forms.size.coerceAtLeast(1) })
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Sprites côte-à-côte : normal + shiny
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(24.dp),
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(
-                    modifier = Modifier.weight(1f),
-                    horizontalAlignment = Alignment.CenterHorizontally
+            if (forms.size > 1) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    AsyncImage(
-                        model = pokemon.spriteUrl,
-                        contentDescription = "${pokemon.nameFr} normal",
-                        modifier = Modifier.size(140.dp)
+                    Text(
+                        "← Glissez pour voir les autres formes →",
+                        fontSize = 11.sp,
+                        color = Color.Gray
                     )
-                    Text("Normal", fontSize = 12.sp, color = Color.Gray)
-                }
-                Column(
-                    modifier = Modifier.weight(1f),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    AsyncImage(
-                        model = pokemon.spriteShinyUrl,
-                        contentDescription = "${pokemon.nameFr} shiny",
-                        modifier = Modifier.size(140.dp)
-                    )
-                    Text("✨ Shiny", fontSize = 12.sp, color = Color.Gray)
+                    FormPagerIndicator(pageCount = forms.size, current = pagerState.currentPage)
                 }
             }
 
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TypeBadge(pokemon.typePrimary)
-                pokemon.typeSecondary?.let { TypeBadge(it) }
-            }
-
-            HorizontalDivider()
-
-            TypeEffectivenessSection(
-                weaknesses = state.weaknesses,
-                resistances = state.resistances,
-                immunities = state.immunities
-            )
-
-            HorizontalDivider()
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Taille", color = Color.Gray, fontSize = 13.sp)
-                    Text("${pokemon.heightM} m", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                }
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Poids", color = Color.Gray, fontSize = 13.sp)
-                    Text("${pokemon.weightKg} kg", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            if (forms.isNotEmpty()) {
+                HorizontalPager(state = pagerState) { page ->
+                    FormPage(form = forms[page])
                 }
             }
-
-            HorizontalDivider()
 
             if (pokemon.availableInGames.isNotEmpty()) {
+                HorizontalDivider()
                 Column(modifier = Modifier.fillMaxWidth()) {
                     Text("Disponible dans", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = Color.Gray)
                     Spacer(Modifier.height(6.dp))
@@ -141,18 +105,18 @@ fun PokemonDetailScreen(
                         }
                     }
                 }
-                HorizontalDivider()
             }
 
-            // Chaîne d'évolution
             if (state.evolutionEntries.isNotEmpty()) {
+                HorizontalDivider()
                 EvolutionChainSection(
                     entries = state.evolutionEntries,
                     currentPokemonId = pokemon.id,
                     onEvolutionClick = onEvolutionClick
                 )
-                HorizontalDivider()
             }
+
+            HorizontalDivider()
 
             CaptureButtons(
                 isCaught = pokemon.isCaught,

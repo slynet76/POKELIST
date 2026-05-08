@@ -6,7 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.pokedex.app.data.repository.PokemonRepository
 import com.pokedex.app.domain.model.EvolutionEntry
 import com.pokedex.app.domain.model.Pokemon
-import com.pokedex.app.domain.util.TypeChart
+import com.pokedex.app.domain.model.PokemonForm
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -15,9 +15,7 @@ import javax.inject.Inject
 
 data class PokemonDetailUiState(
     val pokemon: Pokemon? = null,
-    val weaknesses: List<String> = emptyList(),
-    val resistances: List<String> = emptyList(),
-    val immunities: List<String> = emptyList(),
+    val forms: List<PokemonForm> = emptyList(),
     val evolutionEntries: List<EvolutionEntry> = emptyList(),
     val isLoading: Boolean = true
 )
@@ -39,11 +37,10 @@ class PokemonDetailViewModel @Inject constructor(
         val pokemon = repository.getPokemonById(pokemonId)
         if (pokemon != null) {
             val evolutions = repository.getEvolutionEntries(pokemonId)
+            val forms = repository.getForms(pokemonId)
             _uiState.value = PokemonDetailUiState(
                 pokemon = pokemon,
-                weaknesses = TypeChart.getWeaknesses(pokemon.typePrimary, pokemon.typeSecondary),
-                resistances = TypeChart.getResistances(pokemon.typePrimary, pokemon.typeSecondary),
-                immunities = TypeChart.getImmunities(pokemon.typePrimary, pokemon.typeSecondary),
+                forms = forms,
                 evolutionEntries = evolutions,
                 isLoading = false
             )
