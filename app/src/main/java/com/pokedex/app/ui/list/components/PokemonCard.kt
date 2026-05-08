@@ -1,7 +1,9 @@
 package com.pokedex.app.ui.list.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -24,6 +26,8 @@ import com.pokedex.app.ui.theme.typeColor
 fun PokemonCard(
     pokemon: Pokemon,
     onClick: () -> Unit,
+    onToggleCaught: () -> Unit,
+    onToggleShinyCaught: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val bgColor = if (pokemon.isCaught && pokemon.isShinyCaught)
@@ -38,36 +42,67 @@ fun PokemonCard(
         colors = CardDefaults.cardColors(containerColor = bgColor),
         elevation = CardDefaults.cardElevation(2.dp)
     ) {
-        Box(modifier = Modifier.fillMaxWidth()) {
-            Column(
-                modifier = Modifier.padding(8.dp).fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                AsyncImage(
-                    model = pokemon.spriteUrl,
-                    contentDescription = pokemon.nameFr,
-                    modifier = Modifier.size(64.dp)
-                )
-                Text(
-                    text = "#${pokemon.id.toString().padStart(3, '0')}",
-                    fontSize = 10.sp,
-                    color = Color.Gray
-                )
-                Text(
-                    text = pokemon.nameFr,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium,
-                    textAlign = TextAlign.Center,
-                    maxLines = 1
-                )
-            }
+        Column(
+            modifier = Modifier.padding(top = 6.dp, bottom = 4.dp).fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            AsyncImage(
+                model = pokemon.officialArtworkUrl ?: pokemon.spriteUrl,
+                contentDescription = pokemon.nameFr,
+                modifier = Modifier.size(76.dp)
+            )
+            Text(
+                text = "#${pokemon.id.toString().padStart(3, '0')}",
+                fontSize = 10.sp,
+                color = Color.Gray
+            )
+            Text(
+                text = pokemon.nameFr,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                modifier = Modifier.padding(horizontal = 4.dp)
+            )
+            Spacer(Modifier.height(4.dp))
             Row(
-                modifier = Modifier.align(Alignment.TopEnd).padding(4.dp),
-                horizontalArrangement = Arrangement.spacedBy(2.dp)
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                if (pokemon.isCaught) Text("✓", fontSize = 12.sp, color = Color(0xFF4CAF50))
-                if (pokemon.isShinyCaught) Text("✨", fontSize = 12.sp, color = PokeGold)
+                QuickToggle(
+                    active = pokemon.isCaught,
+                    activeColor = Color(0xFF4CAF50),
+                    label = "✓",
+                    onClick = onToggleCaught
+                )
+                QuickToggle(
+                    active = pokemon.isShinyCaught,
+                    activeColor = PokeGold,
+                    label = "✨",
+                    onClick = onToggleShinyCaught
+                )
             }
         }
+    }
+}
+
+@Composable
+private fun QuickToggle(
+    active: Boolean,
+    activeColor: Color,
+    label: String,
+    onClick: () -> Unit
+) {
+    val bg = if (active) activeColor else Color(0xFFE0E0E0)
+    val textColor = if (active) Color.White else Color(0xFF9E9E9E)
+    Box(
+        modifier = Modifier
+            .size(28.dp)
+            .clip(CircleShape)
+            .background(bg)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(label, fontSize = 13.sp, color = textColor, fontWeight = FontWeight.Bold)
     }
 }

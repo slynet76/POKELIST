@@ -85,7 +85,12 @@ fun PokedexListScreen(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             items(state.pokemon, key = { it.id }) { pokemon ->
-                PokemonCard(pokemon = pokemon, onClick = { onPokemonClick(pokemon.id) })
+                PokemonCard(
+                    pokemon = pokemon,
+                    onClick = { onPokemonClick(pokemon.id) },
+                    onToggleCaught = { viewModel.toggleCaught(pokemon.id) },
+                    onToggleShinyCaught = { viewModel.toggleShinyCaught(pokemon.id) }
+                )
             }
         }
     }
