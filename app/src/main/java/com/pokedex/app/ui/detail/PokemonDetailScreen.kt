@@ -1,6 +1,8 @@
 package com.pokedex.app.ui.detail
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
@@ -25,7 +27,7 @@ import com.pokedex.app.ui.detail.components.FormPage
 import com.pokedex.app.ui.detail.components.FormPagerIndicator
 import com.pokedex.app.ui.theme.PokeRed
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun PokemonDetailScreen(
     onBack: () -> Unit,
@@ -95,13 +97,24 @@ fun PokemonDetailScreen(
                 Column(modifier = Modifier.fillMaxWidth()) {
                     Text("Disponible dans", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = Color.Gray)
                     Spacer(Modifier.height(6.dp))
-                    Row(
+                    FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         pokemon.availableInGames.forEach { code ->
                             val name = SwitchGame.entries.find { it.code == code }?.displayName ?: code
-                            SuggestionChip(onClick = {}, label = { Text(name, fontSize = 12.sp) })
+                            SuggestionChip(
+                                onClick = {},
+                                label = {
+                                    Text(
+                                        text = name,
+                                        fontSize = 12.sp,
+                                        maxLines = 1,
+                                        softWrap = false
+                                    )
+                                }
+                            )
                         }
                     }
                 }
