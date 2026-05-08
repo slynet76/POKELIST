@@ -3,14 +3,18 @@ package com.pokedex.app.data.repository
 import com.pokedex.app.data.local.dao.CaptureStatusDao
 import com.pokedex.app.data.local.dao.EvolutionEdgeDao
 import com.pokedex.app.data.local.dao.PokemonDao
+import com.pokedex.app.data.local.dao.PokemonVariantDao
 import com.pokedex.app.data.local.entity.CaptureStatusEntity
 import com.pokedex.app.data.local.entity.EvolutionEdgeEntity
 import com.pokedex.app.data.local.entity.PokemonEntity
+import com.pokedex.app.data.local.entity.PokemonVariantEntity
 import com.pokedex.app.data.remote.EvolutionConditionFormatter
+import com.pokedex.app.data.remote.FormLabels
 import com.pokedex.app.data.remote.PokeApiService
 import com.pokedex.app.data.remote.dto.ChainLinkDto
 import com.pokedex.app.domain.model.EvolutionEntry
 import com.pokedex.app.domain.model.Pokemon
+import com.pokedex.app.domain.model.PokemonForm
 import com.pokedex.app.domain.util.RegionalFormLabels
 import com.pokedex.app.util.PreferencesManager
 import com.pokedex.app.util.SwitchGamesLoader
@@ -30,6 +34,7 @@ class PokemonRepositoryImpl @Inject constructor(
     private val pokemonDao: PokemonDao,
     private val captureStatusDao: CaptureStatusDao,
     private val evolutionEdgeDao: EvolutionEdgeDao,
+    private val pokemonVariantDao: PokemonVariantDao,
     private val api: PokeApiService,
     private val prefs: PreferencesManager,
     private val gamesLoader: SwitchGamesLoader
@@ -73,6 +78,11 @@ class PokemonRepositoryImpl @Inject constructor(
 
     override suspend fun needsEvolutionDataSync(): Boolean = pokemonDao.countMissingEvolutionData() > 0
 
+    override suspend fun needsVariantsSync(): Boolean = pokemonVariantDao.count() == 0
+
+    override suspend fun getForms(speciesId: Int): List<PokemonForm> =
+        pokemonVariantDao.getVariantsForSpecies(speciesId).map { it.toDomain() }
+
     override suspend fun syncAllPokemon(onProgress: (Int, Int) -> Unit) {
         val total = 1025
         val semaphore = Semaphore(10)
@@ -92,7 +102,7 @@ class PokemonRepositoryImpl @Inject constructor(
     }
 
     override suspend fun backgroundRefreshIfNeeded() {
-        if (prefs.needsSync() || needsEvolutionDataSync()) {
+        if (prefs.needsSync() || needsEvolutionDataSync() || needsVariantsSync()) {
             syncAllPokemon(onProgress = { _, _ -> })
         }
     }
@@ -116,11 +126,11 @@ class PokemonRepositoryImpl @Inject constructor(
     }
 
     private suspend fun fetchAndCache(id: Int, processedChains: MutableSet<Int>) {
-        val dto = api.getPokemon(id)
+        val defaultDto = api.getPokemon(id)
         val species = api.getPokemonSpecies(id)
-        val nameFr = species.names.find { it.language.name == "fr" }?.name ?: dto.name
-        val primaryType = dto.types.find { it.slot == 1 }?.type?.name ?: "normal"
-        val secondaryType = dto.types.find { it.slot == 2 }?.type?.name
+        val nameFr = species.names.find { it.language.name == "fr" }?.name ?: defaultDto.name
+        val primaryType = defaultDto.types.find { it.slot == 1 }?.type?.name ?: "normal"
+        val secondaryType = defaultDto.types.find { it.slot == 2 }?.type?.name
         val chainId = species.evolutionChain?.url?.let { extractTrailingId(it) }
 
         pokemonDao.insertAll(listOf(
@@ -129,13 +139,43 @@ class PokemonRepositoryImpl @Inject constructor(
                 nameFr = nameFr,
                 typePrimary = primaryType,
                 typeSecondary = secondaryType,
-                weightKg = dto.weight / 10f,
-                heightM = dto.height / 10f,
-                spriteUrl = dto.sprites.frontDefault ?: "",
-                spriteShinyUrl = dto.sprites.frontShiny ?: "",
+                weightKg = defaultDto.weight / 10f,
+                heightM = defaultDto.height / 10f,
+                spriteUrl = defaultDto.sprites.frontDefault ?: "",
+                spriteShinyUrl = defaultDto.sprites.frontShiny ?: "",
                 evolutionChainId = chainId
             )
         ))
+
+        // Variantes (formes régionales, méga, gigamax, etc.)
+        val variants = mutableListOf<PokemonVariantEntity>()
+        val speciesEnName = defaultDto.name
+        for (variety in species.varieties) {
+            val variantName = variety.pokemon.name
+            if (FormLabels.shouldSkipVariety(variantName)) continue
+
+            val variantDto = if (variety.isDefault) defaultDto
+            else runCatching { api.getPokemonByName(variantName) }.getOrNull() ?: continue
+
+            val formSuffix = if (variety.isDefault) "default"
+            else variantName.removePrefix("$speciesEnName-").ifEmpty { variantName }
+
+            variants += PokemonVariantEntity(
+                variantId = variantDto.id,
+                speciesId = id,
+                formName = formSuffix,
+                formLabelFr = FormLabels.formatFor(formSuffix),
+                nameFr = nameFr,
+                typePrimary = variantDto.types.find { it.slot == 1 }?.type?.name ?: "normal",
+                typeSecondary = variantDto.types.find { it.slot == 2 }?.type?.name,
+                weightKg = variantDto.weight / 10f,
+                heightM = variantDto.height / 10f,
+                spriteUrl = variantDto.sprites.frontDefault ?: defaultDto.sprites.frontDefault ?: "",
+                spriteShinyUrl = variantDto.sprites.frontShiny ?: defaultDto.sprites.frontShiny ?: "",
+                isDefault = variety.isDefault
+            )
+        }
+        if (variants.isNotEmpty()) pokemonVariantDao.insertAll(variants)
 
         if (chainId != null && processedChains.add(chainId)) {
             runCatching {
@@ -172,5 +212,20 @@ class PokemonRepositoryImpl @Inject constructor(
         weightKg = weightKg, heightM = heightM, spriteUrl = spriteUrl, spriteShinyUrl = spriteShinyUrl,
         isCaught = status?.isCaught ?: false, isShinyCaught = status?.isShinyCaught ?: false,
         availableInGames = games
+    )
+
+    private fun PokemonVariantEntity.toDomain() = PokemonForm(
+        variantId = variantId,
+        speciesId = speciesId,
+        formName = formName,
+        formLabelFr = formLabelFr,
+        nameFr = nameFr,
+        typePrimary = typePrimary,
+        typeSecondary = typeSecondary,
+        weightKg = weightKg,
+        heightM = heightM,
+        spriteUrl = spriteUrl,
+        spriteShinyUrl = spriteShinyUrl,
+        isDefault = isDefault
     )
 }
