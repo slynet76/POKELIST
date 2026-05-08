@@ -63,6 +63,7 @@ dependencies {
     implementation(libs.retrofit.gson)
     implementation(libs.okhttp.logging)
     implementation(libs.coil.compose)
+    implementation(libs.coil.gif)
     implementation(libs.gson)
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

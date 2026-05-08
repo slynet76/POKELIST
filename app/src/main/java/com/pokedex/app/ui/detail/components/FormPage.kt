@@ -50,7 +50,7 @@ fun FormPage(form: PokemonForm, modifier: Modifier = Modifier) {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 AsyncImage(
-                    model = form.spriteUrl,
+                    model = form.animatedSpriteUrl ?: form.spriteUrl,
                     contentDescription = "${form.nameFr} normal",
                     modifier = Modifier.size(140.dp)
                 )
@@ -61,7 +61,7 @@ fun FormPage(form: PokemonForm, modifier: Modifier = Modifier) {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 AsyncImage(
-                    model = form.spriteShinyUrl,
+                    model = form.animatedShinySpriteUrl ?: form.spriteShinyUrl,
                     contentDescription = "${form.nameFr} shiny",
                     modifier = Modifier.size(140.dp)
                 )
@@ -98,5 +98,13 @@ fun FormPage(form: PokemonForm, modifier: Modifier = Modifier) {
                 Text("${form.weightKg} kg", fontWeight = FontWeight.Bold, fontSize = 16.sp)
             }
         }
+
+        HorizontalDivider()
+
+        CryButton(cryUrl = form.cryUrl, modifier = Modifier.fillMaxWidth())
+
+        HorizontalDivider()
+
+        StatsSection(form = form)
     }
 }
