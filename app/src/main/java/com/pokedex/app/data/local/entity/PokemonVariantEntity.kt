@@ -29,5 +29,14 @@ data class PokemonVariantEntity(
     val heightM: Float,
     val spriteUrl: String,
     val spriteShinyUrl: String,
-    val isDefault: Boolean
+    val isDefault: Boolean,
+    val hp: Int = 0,
+    val attack: Int = 0,
+    val defense: Int = 0,
+    val specialAttack: Int = 0,
+    val specialDefense: Int = 0,
+    val speed: Int = 0,
+    val cryUrl: String? = null,
+    val animatedSpriteUrl: String? = null,
+    val animatedShinySpriteUrl: String? = null
 )

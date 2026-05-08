@@ -80,6 +80,8 @@ class PokemonRepositoryImpl @Inject constructor(
 
     override suspend fun needsVariantsSync(): Boolean = pokemonVariantDao.count() == 0
 
+    override suspend fun needsV14DataSync(): Boolean = pokemonVariantDao.countMissingV14Data() > 0
+
     override suspend fun getForms(speciesId: Int): List<PokemonForm> =
         pokemonVariantDao.getVariantsForSpecies(speciesId).map { it.toDomain() }
 
@@ -102,7 +104,7 @@ class PokemonRepositoryImpl @Inject constructor(
     }
 
     override suspend fun backgroundRefreshIfNeeded() {
-        if (prefs.needsSync() || needsEvolutionDataSync() || needsVariantsSync()) {
+        if (prefs.needsSync() || needsEvolutionDataSync() || needsVariantsSync() || needsV14DataSync()) {
             syncAllPokemon(onProgress = { _, _ -> })
         }
     }
@@ -172,7 +174,16 @@ class PokemonRepositoryImpl @Inject constructor(
                 heightM = variantDto.height / 10f,
                 spriteUrl = variantDto.sprites.frontDefault ?: defaultDto.sprites.frontDefault ?: "",
                 spriteShinyUrl = variantDto.sprites.frontShiny ?: defaultDto.sprites.frontShiny ?: "",
-                isDefault = variety.isDefault
+                isDefault = variety.isDefault,
+                hp = statByName(variantDto.stats, "hp"),
+                attack = statByName(variantDto.stats, "attack"),
+                defense = statByName(variantDto.stats, "defense"),
+                specialAttack = statByName(variantDto.stats, "special-attack"),
+                specialDefense = statByName(variantDto.stats, "special-defense"),
+                speed = statByName(variantDto.stats, "speed"),
+                cryUrl = variantDto.cries?.latest,
+                animatedSpriteUrl = variantDto.sprites.other?.showdown?.frontDefault,
+                animatedShinySpriteUrl = variantDto.sprites.other?.showdown?.frontShiny
             )
         }
         if (variants.isNotEmpty()) pokemonVariantDao.insertAll(variants)
@@ -202,6 +213,9 @@ class PokemonRepositoryImpl @Inject constructor(
     private fun extractTrailingId(url: String): Int? =
         url.trimEnd('/').substringAfterLast('/').toIntOrNull()
 
+    private fun statByName(stats: List<com.pokedex.app.data.remote.dto.StatDto>, name: String): Int =
+        stats.firstOrNull { it.stat.name == name }?.baseStat ?: 0
+
     private fun mapToDomain(entities: List<PokemonEntity>, statuses: List<CaptureStatusEntity>): List<Pokemon> {
         val statusMap = statuses.associateBy { it.pokemonId }
         return entities.map { it.toDomain(statusMap[it.id], gamesLoader.getGamesForPokemon(it.id)) }
@@ -226,6 +240,15 @@ class PokemonRepositoryImpl @Inject constructor(
         heightM = heightM,
         spriteUrl = spriteUrl,
         spriteShinyUrl = spriteShinyUrl,
-        isDefault = isDefault
+        isDefault = isDefault,
+        hp = hp,
+        attack = attack,
+        defense = defense,
+        specialAttack = specialAttack,
+        specialDefense = specialDefense,
+        speed = speed,
+        cryUrl = cryUrl,
+        animatedSpriteUrl = animatedSpriteUrl,
+        animatedShinySpriteUrl = animatedShinySpriteUrl
     )
 }

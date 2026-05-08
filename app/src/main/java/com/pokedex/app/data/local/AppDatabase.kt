@@ -25,7 +25,7 @@ import com.pokedex.app.data.local.entity.PokemonEntity
         EvolutionEdgeEntity::class,
         PokemonVariantEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -72,6 +72,22 @@ abstract class AppDatabase : RoomDatabase() {
                     )
                 """.trimIndent())
                 db.execSQL("CREATE INDEX IF NOT EXISTS index_pokemon_variant_speciesId ON pokemon_variant(speciesId)")
+            }
+        }
+
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Adds stats/cries/animated columns to pokemon_variant.
+                // Does NOT touch capture_status — captures are preserved.
+                db.execSQL("ALTER TABLE pokemon_variant ADD COLUMN hp INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE pokemon_variant ADD COLUMN attack INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE pokemon_variant ADD COLUMN defense INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE pokemon_variant ADD COLUMN specialAttack INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE pokemon_variant ADD COLUMN specialDefense INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE pokemon_variant ADD COLUMN speed INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE pokemon_variant ADD COLUMN cryUrl TEXT")
+                db.execSQL("ALTER TABLE pokemon_variant ADD COLUMN animatedSpriteUrl TEXT")
+                db.execSQL("ALTER TABLE pokemon_variant ADD COLUMN animatedShinySpriteUrl TEXT")
             }
         }
     }

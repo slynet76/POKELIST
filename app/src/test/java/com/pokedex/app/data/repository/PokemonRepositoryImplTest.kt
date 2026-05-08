@@ -84,4 +84,12 @@ class PokemonRepositoryImplTest {
         coEvery { pokemonVariantDao.count() } returns 50
         assertEquals(false, repo.needsVariantsSync())
     }
+
+    @Test
+    fun `needsV14DataSync delegue au dao`() = runTest {
+        coEvery { pokemonVariantDao.countMissingV14Data() } returns 100
+        assertEquals(true, repo.needsV14DataSync())
+        coEvery { pokemonVariantDao.countMissingV14Data() } returns 0
+        assertEquals(false, repo.needsV14DataSync())
+    }
 }

@@ -8,7 +8,9 @@ data class PokemonDto(
     val weight: Int,
     val height: Int,
     val types: List<TypeSlotDto>,
-    val sprites: SpritesDto
+    val sprites: SpritesDto,
+    val stats: List<StatDto> = emptyList(),
+    val cries: CriesDto? = null
 )
 
 data class TypeSlotDto(
@@ -18,7 +20,27 @@ data class TypeSlotDto(
 
 data class SpritesDto(
     @SerializedName("front_default") val frontDefault: String?,
-    @SerializedName("front_shiny")   val frontShiny: String?
+    @SerializedName("front_shiny")   val frontShiny: String?,
+    val other: SpritesOtherDto? = null
 )
 
 data class NamedResourceDto(val name: String, val url: String)
+
+data class StatDto(
+    @SerializedName("base_stat") val baseStat: Int,
+    val stat: NamedResourceDto
+)
+
+data class CriesDto(
+    val latest: String? = null,
+    val legacy: String? = null
+)
+
+data class SpritesOtherDto(
+    val showdown: ShowdownSpritesDto? = null
+)
+
+data class ShowdownSpritesDto(
+    @SerializedName("front_default") val frontDefault: String? = null,
+    @SerializedName("front_shiny") val frontShiny: String? = null
+)

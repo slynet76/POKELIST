@@ -14,6 +14,7 @@ interface PokemonRepository {
     suspend fun needsInitialSync(): Boolean
     suspend fun needsEvolutionDataSync(): Boolean
     suspend fun needsVariantsSync(): Boolean
+    suspend fun needsV14DataSync(): Boolean
     suspend fun getEvolutionEntries(pokemonId: Int): List<EvolutionEntry>
     suspend fun getForms(speciesId: Int): List<PokemonForm>
     suspend fun syncAllPokemon(onProgress: (Int, Int) -> Unit)

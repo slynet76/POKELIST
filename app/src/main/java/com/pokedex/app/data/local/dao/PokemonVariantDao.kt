@@ -13,4 +13,7 @@ interface PokemonVariantDao {
 
     @Query("SELECT COUNT(*) FROM pokemon_variant")
     suspend fun count(): Int
+
+    @Query("SELECT COUNT(*) FROM pokemon_variant WHERE cryUrl IS NULL")
+    suspend fun countMissingV14Data(): Int
 }
