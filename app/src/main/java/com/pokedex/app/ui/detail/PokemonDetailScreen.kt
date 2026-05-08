@@ -63,7 +63,7 @@ fun PokemonDetailScreen(
 
         Column(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxWidth()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp, vertical = 12.dp),
@@ -85,7 +85,7 @@ fun PokemonDetailScreen(
             }
 
             if (forms.isNotEmpty()) {
-                HorizontalPager(state = pagerState) { page ->
+                HorizontalPager(state = pagerState, modifier = Modifier.fillMaxWidth()) { page ->
                     FormPage(form = forms[page])
                 }
             }

@@ -114,13 +114,13 @@ private fun EvolutionItem(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(14.dp),
+                .height(22.dp),
             contentAlignment = Alignment.Center
         ) {
             entry.formLabel?.let { label ->
                 Text(
                     label,
-                    fontSize = 9.sp,
+                    fontSize = 10.sp,
                     fontStyle = FontStyle.Italic,
                     color = PokeRed,
                     textAlign = TextAlign.Center,

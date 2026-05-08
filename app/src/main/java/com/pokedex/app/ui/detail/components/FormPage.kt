@@ -28,19 +28,15 @@ fun FormPage(form: PokemonForm, modifier: Modifier = Modifier) {
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         // Étiquette de forme (si pas la forme par défaut)
-        Box(
-            modifier = Modifier.fillMaxWidth().height(20.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            form.formLabelFr?.let {
-                Text(
-                    it,
-                    color = PokeRed,
-                    fontStyle = FontStyle.Italic,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 14.sp
-                )
-            }
+        form.formLabelFr?.let {
+            Text(
+                it,
+                color = PokeRed,
+                fontStyle = FontStyle.Italic,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 14.sp,
+                modifier = Modifier.padding(bottom = 4.dp)
+            )
         }
 
         // Sprites côte-à-côte
