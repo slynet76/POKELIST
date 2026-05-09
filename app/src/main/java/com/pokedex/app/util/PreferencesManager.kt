@@ -26,5 +26,5 @@ class PreferencesManager @Inject constructor(
 
     fun needsDataVersionSync(): Boolean = dataVersion < CURRENT_DATA_VERSION
 
-    companion object { const val CURRENT_DATA_VERSION = 7 }
+    companion object { const val CURRENT_DATA_VERSION = 8 }
 }

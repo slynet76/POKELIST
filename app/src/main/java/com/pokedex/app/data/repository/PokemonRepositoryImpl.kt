@@ -209,8 +209,8 @@ class PokemonRepositoryImpl @Inject constructor(
                 typeSecondary = variantDto.types.find { it.slot == 2 }?.type?.name,
                 weightKg = variantDto.weight / 10f,
                 heightM = variantDto.height / 10f,
-                spriteUrl = variantDto.sprites.frontDefault ?: defaultDto.sprites.frontDefault ?: "",
-                spriteShinyUrl = variantDto.sprites.frontShiny ?: defaultDto.sprites.frontShiny ?: "",
+                spriteUrl = variantDto.sprites.frontDefault ?: staticSpriteUrl(variantDto.id),
+                spriteShinyUrl = variantDto.sprites.frontShiny ?: staticShinySpriteUrl(variantDto.id),
                 isDefault = variety.isDefault,
                 hp = statByName(variantDto.stats, "hp"),
                 attack = statByName(variantDto.stats, "attack"),
@@ -219,9 +219,9 @@ class PokemonRepositoryImpl @Inject constructor(
                 specialDefense = statByName(variantDto.stats, "special-defense"),
                 speed = statByName(variantDto.stats, "speed"),
                 cryUrl = variantDto.cries?.latest,
-                animatedSpriteUrl = variantDto.sprites.other?.showdown?.frontDefault,
-                animatedShinySpriteUrl = variantDto.sprites.other?.showdown?.frontShiny,
-                officialArtworkUrl = variantDto.sprites.other?.officialArtwork?.frontDefault,
+                animatedSpriteUrl = variantDto.sprites.other?.showdown?.frontDefault ?: staticShowdownUrl(variantDto.id),
+                animatedShinySpriteUrl = variantDto.sprites.other?.showdown?.frontShiny ?: staticShowdownShinyUrl(variantDto.id),
+                officialArtworkUrl = variantDto.sprites.other?.officialArtwork?.frontDefault ?: staticOfficialArtworkUrl(variantDto.id),
                 officialArtworkShinyUrl = variantDto.sprites.other?.officialArtwork?.frontShiny
             )
             variants += variantEntity
@@ -250,8 +250,8 @@ class PokemonRepositoryImpl @Inject constructor(
                         typeSecondary = formDto.types.find { it.slot == 2 }?.type?.name ?: parentEntity.typeSecondary,
                         weightKg = parentEntity.weightKg,
                         heightM = parentEntity.heightM,
-                        spriteUrl = formDto.sprites.frontDefault ?: parentEntity.spriteUrl,
-                        spriteShinyUrl = formDto.sprites.frontShiny ?: parentEntity.spriteShinyUrl,
+                        spriteUrl = formDto.sprites.frontDefault ?: staticSpriteUrl(formDto.id),
+                        spriteShinyUrl = formDto.sprites.frontShiny ?: staticShinySpriteUrl(formDto.id),
                         isDefault = false,
                         hp = parentEntity.hp,
                         attack = parentEntity.attack,
@@ -260,10 +260,10 @@ class PokemonRepositoryImpl @Inject constructor(
                         specialDefense = parentEntity.specialDefense,
                         speed = parentEntity.speed,
                         cryUrl = parentEntity.cryUrl,
-                        animatedSpriteUrl = formDto.sprites.other?.showdown?.frontDefault ?: parentEntity.animatedSpriteUrl,
-                        animatedShinySpriteUrl = formDto.sprites.other?.showdown?.frontShiny ?: parentEntity.animatedShinySpriteUrl,
-                        officialArtworkUrl = formDto.sprites.other?.officialArtwork?.frontDefault ?: parentEntity.officialArtworkUrl,
-                        officialArtworkShinyUrl = formDto.sprites.other?.officialArtwork?.frontShiny ?: parentEntity.officialArtworkShinyUrl
+                        animatedSpriteUrl = formDto.sprites.other?.showdown?.frontDefault ?: staticShowdownUrl(formDto.id),
+                        animatedShinySpriteUrl = formDto.sprites.other?.showdown?.frontShiny ?: staticShowdownShinyUrl(formDto.id),
+                        officialArtworkUrl = formDto.sprites.other?.officialArtwork?.frontDefault ?: staticOfficialArtworkUrl(formDto.id),
+                        officialArtworkShinyUrl = formDto.sprites.other?.officialArtwork?.frontShiny
                     )
                     for (slot in parentDto.abilities) {
                         cosmeticAbilities += VariantAbilityEntity(
@@ -337,6 +337,17 @@ class PokemonRepositoryImpl @Inject constructor(
 
     private fun extractTrailingId(url: String): Int? =
         url.trimEnd('/').substringAfterLast('/').toIntOrNull()
+
+    private fun staticSpriteUrl(id: Int) =
+        "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/$id.png"
+    private fun staticShinySpriteUrl(id: Int) =
+        "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/shiny/$id.png"
+    private fun staticOfficialArtworkUrl(id: Int) =
+        "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/$id.png"
+    private fun staticShowdownUrl(id: Int) =
+        "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/$id.gif"
+    private fun staticShowdownShinyUrl(id: Int) =
+        "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/shiny/$id.gif"
 
     private fun statByName(stats: List<com.pokedex.app.data.remote.dto.StatDto>, name: String): Int =
         stats.firstOrNull { it.stat.name == name }?.baseStat ?: 0
