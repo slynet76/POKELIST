@@ -10,7 +10,14 @@ data class PokemonDto(
     val types: List<TypeSlotDto>,
     val sprites: SpritesDto,
     val stats: List<StatDto> = emptyList(),
-    val cries: CriesDto? = null
+    val cries: CriesDto? = null,
+    val abilities: List<AbilitySlotDto> = emptyList()
+)
+
+data class AbilitySlotDto(
+    val ability: NamedResourceDto,
+    @SerializedName("is_hidden") val isHidden: Boolean,
+    val slot: Int
 )
 
 data class TypeSlotDto(

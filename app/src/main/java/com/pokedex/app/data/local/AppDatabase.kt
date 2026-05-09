@@ -4,14 +4,18 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.pokedex.app.data.local.dao.AbilityDao
 import com.pokedex.app.data.local.dao.CaptureStatusDao
 import com.pokedex.app.data.local.dao.EvolutionEdgeDao
 import com.pokedex.app.data.local.dao.PokemonDao
 import com.pokedex.app.data.local.dao.PokemonVariantDao
+import com.pokedex.app.data.local.dao.VariantAbilityDao
+import com.pokedex.app.data.local.entity.AbilityEntity
 import com.pokedex.app.data.local.entity.CaptureStatusEntity
 import com.pokedex.app.data.local.entity.EvolutionEdgeEntity
 import com.pokedex.app.data.local.entity.PokemonVariantEntity
 import com.pokedex.app.data.local.entity.PokemonEntity
+import com.pokedex.app.data.local.entity.VariantAbilityEntity
 
 /**
  * IMPORTANT: capture_status is the ONLY table holding user data (which Pokémon they've caught).
@@ -23,9 +27,11 @@ import com.pokedex.app.data.local.entity.PokemonEntity
         PokemonEntity::class,
         CaptureStatusEntity::class,
         EvolutionEdgeEntity::class,
-        PokemonVariantEntity::class
+        PokemonVariantEntity::class,
+        AbilityEntity::class,
+        VariantAbilityEntity::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -33,6 +39,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun captureStatusDao(): CaptureStatusDao
     abstract fun evolutionEdgeDao(): EvolutionEdgeDao
     abstract fun pokemonVariantDao(): PokemonVariantDao
+    abstract fun abilityDao(): AbilityDao
+    abstract fun variantAbilityDao(): VariantAbilityDao
 
     companion object {
         val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -97,6 +105,29 @@ abstract class AppDatabase : RoomDatabase() {
                 db.execSQL("ALTER TABLE pokemon ADD COLUMN officialArtworkUrl TEXT")
                 db.execSQL("ALTER TABLE pokemon_variant ADD COLUMN officialArtworkUrl TEXT")
                 db.execSQL("ALTER TABLE pokemon_variant ADD COLUMN officialArtworkShinyUrl TEXT")
+            }
+        }
+
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Adds talents/abilities tables. Does NOT touch capture_status — captures are preserved.
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS ability (
+                        name TEXT NOT NULL PRIMARY KEY,
+                        nameFr TEXT NOT NULL,
+                        descriptionFr TEXT
+                    )
+                """.trimIndent())
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS variant_ability (
+                        variantId INTEGER NOT NULL,
+                        abilityName TEXT NOT NULL,
+                        isHidden INTEGER NOT NULL,
+                        slot INTEGER NOT NULL,
+                        PRIMARY KEY(variantId, abilityName)
+                    )
+                """.trimIndent())
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_variant_ability_variantId ON variant_ability(variantId)")
             }
         }
     }

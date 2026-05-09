@@ -18,4 +18,7 @@ interface PokeApiService {
 
     @GET("evolution-chain/{id}")
     suspend fun getEvolutionChain(@Path("id") id: Int): EvolutionChainDto
+
+    @GET("ability/{name}")
+    suspend fun getAbility(@Path("name") name: String): com.pokedex.app.data.remote.dto.AbilityDto
 }

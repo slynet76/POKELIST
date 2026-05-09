@@ -37,7 +37,9 @@ class PokemonDetailViewModel @Inject constructor(
         val pokemon = repository.getPokemonById(pokemonId)
         if (pokemon != null) {
             val evolutions = repository.getEvolutionEntries(pokemonId)
-            val forms = repository.getForms(pokemonId)
+            val forms = repository.getForms(pokemonId).map { form ->
+                form.copy(abilities = repository.getAbilitiesForVariant(form.variantId))
+            }
             _uiState.value = PokemonDetailUiState(
                 pokemon = pokemon,
                 forms = forms,

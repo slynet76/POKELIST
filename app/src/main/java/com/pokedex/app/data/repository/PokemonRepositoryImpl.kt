@@ -1,19 +1,25 @@
 package com.pokedex.app.data.repository
 
+import com.pokedex.app.data.local.dao.AbilityDao
 import com.pokedex.app.data.local.dao.CaptureStatusDao
 import com.pokedex.app.data.local.dao.EvolutionEdgeDao
 import com.pokedex.app.data.local.dao.PokemonDao
 import com.pokedex.app.data.local.dao.PokemonVariantDao
+import com.pokedex.app.data.local.dao.VariantAbilityDao
+import com.pokedex.app.data.local.entity.AbilityEntity
 import com.pokedex.app.data.local.entity.CaptureStatusEntity
 import com.pokedex.app.data.local.entity.EvolutionEdgeEntity
 import com.pokedex.app.data.local.entity.PokemonEntity
 import com.pokedex.app.data.local.entity.PokemonVariantEntity
+import com.pokedex.app.data.local.entity.VariantAbilityEntity
 import com.pokedex.app.data.remote.EvolutionConditionFormatter
 import com.pokedex.app.data.remote.FormLabels
 import com.pokedex.app.data.remote.PokeApiService
 import com.pokedex.app.data.remote.dto.ChainLinkDto
+import com.pokedex.app.data.remote.dto.PokemonDto
 import com.pokedex.app.domain.model.EvolutionEntry
 import com.pokedex.app.domain.model.Pokemon
+import com.pokedex.app.domain.model.PokemonAbility
 import com.pokedex.app.domain.model.PokemonForm
 import com.pokedex.app.domain.util.RegionalFormLabels
 import com.pokedex.app.util.PreferencesManager
@@ -35,6 +41,8 @@ class PokemonRepositoryImpl @Inject constructor(
     private val captureStatusDao: CaptureStatusDao,
     private val evolutionEdgeDao: EvolutionEdgeDao,
     private val pokemonVariantDao: PokemonVariantDao,
+    private val abilityDao: AbilityDao,
+    private val variantAbilityDao: VariantAbilityDao,
     private val api: PokeApiService,
     private val prefs: PreferencesManager,
     private val gamesLoader: SwitchGamesLoader
@@ -84,19 +92,39 @@ class PokemonRepositoryImpl @Inject constructor(
 
     override suspend fun needsArtworkSync(): Boolean = pokemonDao.countMissingArtwork() > 0
 
+    override suspend fun needsAbilitiesSync(): Boolean = abilityDao.count() == 0 || variantAbilityDao.count() == 0
+
     override suspend fun getForms(speciesId: Int): List<PokemonForm> =
         pokemonVariantDao.getVariantsForSpecies(speciesId).map { it.toDomain() }
+
+    override suspend fun getAbilitiesForVariant(variantId: Int): List<PokemonAbility> {
+        val rows = variantAbilityDao.getForVariant(variantId)
+        if (rows.isEmpty()) return emptyList()
+        val names = rows.map { it.abilityName }.distinct()
+        val abilities = abilityDao.getByNames(names).associateBy { it.name }
+        return rows.mapNotNull { row ->
+            val a = abilities[row.abilityName] ?: return@mapNotNull null
+            PokemonAbility(
+                name = a.name,
+                nameFr = a.nameFr,
+                descriptionFr = a.descriptionFr,
+                isHidden = row.isHidden,
+                slot = row.slot
+            )
+        }
+    }
 
     override suspend fun syncAllPokemon(onProgress: (Int, Int) -> Unit) {
         val total = 1025
         val semaphore = Semaphore(10)
         val done = AtomicInteger(0)
         val processedChains = Collections.synchronizedSet(mutableSetOf<Int>())
+        val processedAbilities = Collections.synchronizedSet(mutableSetOf<String>())
         coroutineScope {
             (1..total).map { id ->
                 async {
                     semaphore.withPermit {
-                        runCatching { fetchAndCache(id, processedChains) }
+                        runCatching { fetchAndCache(id, processedChains, processedAbilities) }
                         onProgress(done.incrementAndGet(), total)
                     }
                 }
@@ -106,7 +134,7 @@ class PokemonRepositoryImpl @Inject constructor(
     }
 
     override suspend fun backgroundRefreshIfNeeded() {
-        if (prefs.needsSync() || needsEvolutionDataSync() || needsVariantsSync() || needsV14DataSync() || needsArtworkSync()) {
+        if (prefs.needsSync() || needsEvolutionDataSync() || needsVariantsSync() || needsV14DataSync() || needsArtworkSync() || needsAbilitiesSync()) {
             syncAllPokemon(onProgress = { _, _ -> })
         }
     }
@@ -129,7 +157,7 @@ class PokemonRepositoryImpl @Inject constructor(
         }
     }
 
-    private suspend fun fetchAndCache(id: Int, processedChains: MutableSet<Int>) {
+    private suspend fun fetchAndCache(id: Int, processedChains: MutableSet<Int>, processedAbilities: MutableSet<String>) {
         val defaultDto = api.getPokemon(id)
         val species = api.getPokemonSpecies(id)
         val nameFr = species.names.find { it.language.name == "fr" }?.name ?: defaultDto.name
@@ -154,6 +182,7 @@ class PokemonRepositoryImpl @Inject constructor(
 
         // Variantes (formes régionales, méga, gigamax, etc.)
         val variants = mutableListOf<PokemonVariantEntity>()
+        val variantDtos = mutableListOf<PokemonDto>()
         val speciesEnName = defaultDto.name
         for (variety in species.varieties) {
             val variantName = variety.pokemon.name
@@ -165,6 +194,7 @@ class PokemonRepositoryImpl @Inject constructor(
             val formSuffix = if (variety.isDefault) "default"
             else variantName.removePrefix("$speciesEnName-").ifEmpty { variantName }
 
+            variantDtos += variantDto
             variants += PokemonVariantEntity(
                 variantId = variantDto.id,
                 speciesId = id,
@@ -193,6 +223,28 @@ class PokemonRepositoryImpl @Inject constructor(
         }
         if (variants.isNotEmpty()) pokemonVariantDao.insertAll(variants)
 
+        // Talents/abilities: collect rows per variant + dedup ability fetches.
+        val abilityRows = mutableListOf<VariantAbilityEntity>()
+        val abilityNamesToFetch = mutableSetOf<String>()
+        for (variantDto in variantDtos) {
+            for (slotDto in variantDto.abilities) {
+                val abilityName = slotDto.ability.name
+                abilityRows += VariantAbilityEntity(
+                    variantId = variantDto.id,
+                    abilityName = abilityName,
+                    isHidden = slotDto.isHidden,
+                    slot = slotDto.slot
+                )
+                if (processedAbilities.add(abilityName)) {
+                    abilityNamesToFetch += abilityName
+                }
+            }
+        }
+        if (abilityRows.isNotEmpty()) variantAbilityDao.insertAll(abilityRows)
+        for (abilityName in abilityNamesToFetch) {
+            fetchAndStoreAbility(abilityName)
+        }
+
         if (chainId != null && processedChains.add(chainId)) {
             runCatching {
                 val chain = api.getEvolutionChain(chainId)
@@ -200,6 +252,18 @@ class PokemonRepositoryImpl @Inject constructor(
                 walkChain(chain.chain, edges)
                 if (edges.isNotEmpty()) evolutionEdgeDao.insertAll(edges)
             }
+        }
+    }
+
+    private suspend fun fetchAndStoreAbility(name: String) {
+        runCatching {
+            val dto = api.getAbility(name)
+            val nameFr = dto.names.firstOrNull { it.language.name == "fr" }?.name
+                ?: name.split('-').joinToString(" ") { it.replaceFirstChar { c -> c.uppercase() } }
+            val descriptionFr = dto.flavorTextEntries.firstOrNull { it.language.name == "fr" }?.flavorText
+                ?.replace('\n', ' ')
+                ?.replace('', ' ')
+            abilityDao.insertAll(listOf(AbilityEntity(name = name, nameFr = nameFr, descriptionFr = descriptionFr)))
         }
     }
 

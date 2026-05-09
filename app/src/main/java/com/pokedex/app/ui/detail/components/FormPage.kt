@@ -101,6 +101,10 @@ fun FormPage(form: PokemonForm, modifier: Modifier = Modifier) {
 
         HorizontalDivider()
 
+        AbilitiesSection(abilities = form.abilities)
+
+        HorizontalDivider()
+
         CryButton(cryUrl = form.cryUrl, modifier = Modifier.fillMaxWidth())
 
         HorizontalDivider()

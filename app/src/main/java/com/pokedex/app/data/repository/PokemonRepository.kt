@@ -2,6 +2,7 @@ package com.pokedex.app.data.repository
 
 import com.pokedex.app.domain.model.EvolutionEntry
 import com.pokedex.app.domain.model.Pokemon
+import com.pokedex.app.domain.model.PokemonAbility
 import com.pokedex.app.domain.model.PokemonForm
 import kotlinx.coroutines.flow.Flow
 
@@ -16,8 +17,10 @@ interface PokemonRepository {
     suspend fun needsVariantsSync(): Boolean
     suspend fun needsV14DataSync(): Boolean
     suspend fun needsArtworkSync(): Boolean
+    suspend fun needsAbilitiesSync(): Boolean
     suspend fun getEvolutionEntries(pokemonId: Int): List<EvolutionEntry>
     suspend fun getForms(speciesId: Int): List<PokemonForm>
+    suspend fun getAbilitiesForVariant(variantId: Int): List<PokemonAbility>
     suspend fun syncAllPokemon(onProgress: (Int, Int) -> Unit)
     suspend fun backgroundRefreshIfNeeded()
 }

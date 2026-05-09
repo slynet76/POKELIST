@@ -1,9 +1,11 @@
 package com.pokedex.app.data.repository
 
+import com.pokedex.app.data.local.dao.AbilityDao
 import com.pokedex.app.data.local.dao.CaptureStatusDao
 import com.pokedex.app.data.local.dao.EvolutionEdgeDao
 import com.pokedex.app.data.local.dao.PokemonDao
 import com.pokedex.app.data.local.dao.PokemonVariantDao
+import com.pokedex.app.data.local.dao.VariantAbilityDao
 import com.pokedex.app.data.local.entity.CaptureStatusEntity
 import com.pokedex.app.data.remote.PokeApiService
 import com.pokedex.app.util.PreferencesManager
@@ -20,6 +22,8 @@ class PokemonRepositoryImplTest {
     private lateinit var captureStatusDao: CaptureStatusDao
     private lateinit var evolutionEdgeDao: EvolutionEdgeDao
     private lateinit var pokemonVariantDao: PokemonVariantDao
+    private lateinit var abilityDao: AbilityDao
+    private lateinit var variantAbilityDao: VariantAbilityDao
     private lateinit var api: PokeApiService
     private lateinit var prefs: PreferencesManager
     private lateinit var gamesLoader: SwitchGamesLoader
@@ -31,10 +35,22 @@ class PokemonRepositoryImplTest {
         captureStatusDao = mockk(relaxed = true)
         evolutionEdgeDao = mockk(relaxed = true)
         pokemonVariantDao = mockk(relaxed = true)
+        abilityDao = mockk(relaxed = true)
+        variantAbilityDao = mockk(relaxed = true)
         api = mockk()
         prefs = mockk(relaxed = true)
         gamesLoader = mockk(relaxed = true)
-        repo = PokemonRepositoryImpl(pokemonDao, captureStatusDao, evolutionEdgeDao, pokemonVariantDao, api, prefs, gamesLoader)
+        repo = PokemonRepositoryImpl(pokemonDao, captureStatusDao, evolutionEdgeDao, pokemonVariantDao, abilityDao, variantAbilityDao, api, prefs, gamesLoader)
+    }
+
+    @Test
+    fun `needsAbilitiesSync delegue aux daos`() = runTest {
+        coEvery { abilityDao.count() } returns 0
+        coEvery { variantAbilityDao.count() } returns 0
+        assertEquals(true, repo.needsAbilitiesSync())
+        coEvery { abilityDao.count() } returns 300
+        coEvery { variantAbilityDao.count() } returns 2000
+        assertEquals(false, repo.needsAbilitiesSync())
     }
 
     @Test
