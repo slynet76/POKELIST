@@ -21,4 +21,7 @@ interface PokeApiService {
 
     @GET("ability/{name}")
     suspend fun getAbility(@Path("name") name: String): com.pokedex.app.data.remote.dto.AbilityDto
+
+    @GET("pokemon-form/{name}")
+    suspend fun getPokemonForm(@Path("name") name: String): com.pokedex.app.data.remote.dto.PokemonFormDto
 }

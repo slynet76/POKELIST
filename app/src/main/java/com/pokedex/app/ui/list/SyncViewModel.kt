@@ -30,7 +30,8 @@ class SyncViewModel @Inject constructor(
                 repository.needsVariantsSync() ||
                 repository.needsV14DataSync() ||
                 repository.needsArtworkSync() ||
-                repository.needsAbilitiesSync()
+                repository.needsAbilitiesSync() ||
+                repository.needsCosmeticFormsSync()
             if (needsFullSync) {
                 _state.value = SyncState.Syncing(0, 1025)
                 repository.syncAllPokemon { done, total ->

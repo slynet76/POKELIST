@@ -94,6 +94,8 @@ class PokemonRepositoryImpl @Inject constructor(
 
     override suspend fun needsAbilitiesSync(): Boolean = abilityDao.count() == 0 || variantAbilityDao.count() == 0
 
+    override suspend fun needsCosmeticFormsSync(): Boolean = prefs.needsDataVersionSync()
+
     override suspend fun getForms(speciesId: Int): List<PokemonForm> =
         pokemonVariantDao.getVariantsForSpecies(speciesId).map { it.toDomain() }
 
@@ -131,10 +133,11 @@ class PokemonRepositoryImpl @Inject constructor(
             }.forEach { it.await() }
         }
         prefs.lastSyncTimestamp = System.currentTimeMillis()
+        prefs.dataVersion = PreferencesManager.CURRENT_DATA_VERSION
     }
 
     override suspend fun backgroundRefreshIfNeeded() {
-        if (prefs.needsSync() || needsEvolutionDataSync() || needsVariantsSync() || needsV14DataSync() || needsArtworkSync() || needsAbilitiesSync()) {
+        if (prefs.needsSync() || needsEvolutionDataSync() || needsVariantsSync() || needsV14DataSync() || needsArtworkSync() || needsAbilitiesSync() || needsCosmeticFormsSync()) {
             syncAllPokemon(onProgress = { _, _ -> })
         }
     }
@@ -183,6 +186,7 @@ class PokemonRepositoryImpl @Inject constructor(
         // Variantes (formes régionales, méga, gigamax, etc.)
         val variants = mutableListOf<PokemonVariantEntity>()
         val variantDtos = mutableListOf<PokemonDto>()
+        val variantPairs = mutableListOf<Pair<PokemonDto, PokemonVariantEntity>>()
         val speciesEnName = defaultDto.name
         for (variety in species.varieties) {
             val variantName = variety.pokemon.name
@@ -195,7 +199,7 @@ class PokemonRepositoryImpl @Inject constructor(
             else variantName.removePrefix("$speciesEnName-").ifEmpty { variantName }
 
             variantDtos += variantDto
-            variants += PokemonVariantEntity(
+            val variantEntity = PokemonVariantEntity(
                 variantId = variantDto.id,
                 speciesId = id,
                 formName = formSuffix,
@@ -220,8 +224,60 @@ class PokemonRepositoryImpl @Inject constructor(
                 officialArtworkUrl = variantDto.sprites.other?.officialArtwork?.frontDefault,
                 officialArtworkShinyUrl = variantDto.sprites.other?.officialArtwork?.frontShiny
             )
+            variants += variantEntity
+            variantPairs += variantDto to variantEntity
         }
         if (variants.isNotEmpty()) pokemonVariantDao.insertAll(variants)
+
+        // Cosmetic forms (Unown letters, Vivillon patterns, etc.)
+        val cosmeticForms = mutableListOf<PokemonVariantEntity>()
+        val cosmeticAbilities = mutableListOf<VariantAbilityEntity>()
+        for ((parentDto, parentEntity) in variantPairs) {
+            if (parentDto.forms.size <= 1) continue
+            val parentName = parentDto.name
+            for (formRef in parentDto.forms) {
+                if (formRef.name == parentName) continue
+                runCatching {
+                    val formDto = api.getPokemonForm(formRef.name)
+                    val formSuffix = formRef.name.removePrefix("$parentName-").ifEmpty { formRef.name }
+                    cosmeticForms += PokemonVariantEntity(
+                        variantId = formDto.id,
+                        speciesId = id,
+                        formName = formSuffix,
+                        formLabelFr = FormLabels.formatFor(formSuffix),
+                        nameFr = parentEntity.nameFr,
+                        typePrimary = formDto.types.find { it.slot == 1 }?.type?.name ?: parentEntity.typePrimary,
+                        typeSecondary = formDto.types.find { it.slot == 2 }?.type?.name ?: parentEntity.typeSecondary,
+                        weightKg = parentEntity.weightKg,
+                        heightM = parentEntity.heightM,
+                        spriteUrl = formDto.sprites.frontDefault ?: parentEntity.spriteUrl,
+                        spriteShinyUrl = formDto.sprites.frontShiny ?: parentEntity.spriteShinyUrl,
+                        isDefault = false,
+                        hp = parentEntity.hp,
+                        attack = parentEntity.attack,
+                        defense = parentEntity.defense,
+                        specialAttack = parentEntity.specialAttack,
+                        specialDefense = parentEntity.specialDefense,
+                        speed = parentEntity.speed,
+                        cryUrl = parentEntity.cryUrl,
+                        animatedSpriteUrl = formDto.sprites.other?.showdown?.frontDefault ?: parentEntity.animatedSpriteUrl,
+                        animatedShinySpriteUrl = formDto.sprites.other?.showdown?.frontShiny ?: parentEntity.animatedShinySpriteUrl,
+                        officialArtworkUrl = formDto.sprites.other?.officialArtwork?.frontDefault ?: parentEntity.officialArtworkUrl,
+                        officialArtworkShinyUrl = formDto.sprites.other?.officialArtwork?.frontShiny ?: parentEntity.officialArtworkShinyUrl
+                    )
+                    for (slot in parentDto.abilities) {
+                        cosmeticAbilities += VariantAbilityEntity(
+                            variantId = formDto.id,
+                            abilityName = slot.ability.name,
+                            isHidden = slot.isHidden,
+                            slot = slot.slot
+                        )
+                    }
+                }
+            }
+        }
+        if (cosmeticForms.isNotEmpty()) pokemonVariantDao.insertAll(cosmeticForms)
+        if (cosmeticAbilities.isNotEmpty()) variantAbilityDao.insertAll(cosmeticAbilities)
 
         // Talents/abilities: collect rows per variant + dedup ability fetches.
         val abilityRows = mutableListOf<VariantAbilityEntity>()

@@ -11,7 +11,8 @@ data class PokemonDto(
     val sprites: SpritesDto,
     val stats: List<StatDto> = emptyList(),
     val cries: CriesDto? = null,
-    val abilities: List<AbilitySlotDto> = emptyList()
+    val abilities: List<AbilitySlotDto> = emptyList(),
+    val forms: List<NamedResourceDto> = emptyList()
 )
 
 data class AbilitySlotDto(

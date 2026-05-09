@@ -19,4 +19,12 @@ class PreferencesManager @Inject constructor(
         val sevenDays = 7L * 24 * 60 * 60 * 1000
         return System.currentTimeMillis() - lastSyncTimestamp > sevenDays
     }
+
+    var dataVersion: Int
+        get() = prefs.getInt("data_version", 0)
+        set(value) = prefs.edit().putInt("data_version", value).apply()
+
+    fun needsDataVersionSync(): Boolean = dataVersion < CURRENT_DATA_VERSION
+
+    companion object { const val CURRENT_DATA_VERSION = 7 }
 }

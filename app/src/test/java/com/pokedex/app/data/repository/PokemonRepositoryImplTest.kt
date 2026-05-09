@@ -110,6 +110,14 @@ class PokemonRepositoryImplTest {
     }
 
     @Test
+    fun `needsCosmeticFormsSync delegue aux prefs`() = runTest {
+        every { prefs.needsDataVersionSync() } returns true
+        assertEquals(true, repo.needsCosmeticFormsSync())
+        every { prefs.needsDataVersionSync() } returns false
+        assertEquals(false, repo.needsCosmeticFormsSync())
+    }
+
+    @Test
     fun `needsArtworkSync delegue au dao`() = runTest {
         coEvery { pokemonDao.countMissingArtwork() } returns 1
         assertEquals(true, repo.needsArtworkSync())
